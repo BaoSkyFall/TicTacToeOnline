@@ -1,9 +1,10 @@
 const io = require('../app').io;
+var _ = require('lodash');
 let connectedUsers = {};
 let playerWait = {};
 const { createUser, createMessage, createChat } = require('./Factories');
 let communityChat = createChat()
-
+let roomsPlay = [];
 module.exports = function (socket) {
     console.log("Socket Id: " + socket.id);
     let sendMessageToChatFromUser;
@@ -38,7 +39,7 @@ module.exports = function (socket) {
             connectedUsers = removeUser(connectedUsers, socket.user.name)
             io.emit("USER_DISCONNECTED", connectedUsers);
             if (socket.user.name == playerWait.name)
-                playerWait = {};    
+                playerWait = {};
             console.log("After Disconnecting: ", connectedUsers);
         }
     })
@@ -69,20 +70,68 @@ module.exports = function (socket) {
         // console.log('user:', user);
 
         if (user.name in connectedUsers) {
-            console.log(typeof (playerWait.name) == "undefined");
-            if (typeof(playerWait.name) == "undefined") {
+
+            if (typeof (playerWait.name) == "undefined") {
                 user.socketId = socket.id
                 playerWait = user;
                 console.log('playerWait:', playerWait);
             }
             else {
+
                 const newChat = createChat({ name: `${user.name} VS ${playerWait.name}`, users: [playerWait, user] })
-                socket.to(playerWait.socketId).emit("FIND_GAME", newChat);
-                socket.emit("FIND_GAME", newChat);
+                let room = {
+                    id: newChat.id,
+                    name: newChat.name,
+                    squares: Array(400).fill(null),
+                    turn: true,
+                    isFinish: false,
+                    isWinP1: false,
+                    users: newChat.users
+                }
+
+                roomsPlay.push(room)
+                socket.to(playerWait.socketId).emit("FIND_GAME", { newChat, room, Player1: true });
+                socket.emit("FIND_GAME", { newChat, room, Player1: false });
+                socket.to(playerWait.socketId).emit("SEND_PLAYER", { Player1: true });
+                socket.emit("SEND_PLAYER", { Player1: false });
+                console.log(newChat)
+                // socket.to(playerWait.socketId).emit("PRIVATE_MESSAGE", newChat);
+                // socket.emit("PRIVATE_MESSAGE", newChat);
                 playerWait = {};
+
                 console.log('playerWait:', playerWait);
             }
         }
+    })
+    //CHECK_SQUARE_CLICK
+    socket.on("CHECK_SQUARE_CLICK", ({ squares, isFinish, isWinP1, Player1, id }) => {
+        let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        console.log(index);
+        console.log('isFinish:', isFinish)
+        console.log('isWinP1:', isWinP1)
+        console.log('Player1:', Player1)
+        console.log('id:', id)
+        roomsPlay[index].squares = squares;
+        roomsPlay[index].isFinish = isFinish;
+        roomsPlay[index].isWinP1 = isWinP1;
+
+
+
+        if (Player1) {
+            console.log("User 1 socketId: ",
+            roomsPlay[index].users[1]
+            )
+            socket.to(roomsPlay[index].users[1].socketId).emit("CHECK_SQUARE_CLICK", {test:true});
+
+        }
+        else {
+            console.log("User 0 socketId: ",
+            roomsPlay[index].users[0]
+            )
+            socket.to(roomsPlay[index].users[0].socketId).emit("CHECK_SQUARE_CLICK", {test:true});
+
+        }
+        // console.log(roomsPlay[index]);
     })
 }
 function addUser(userList, user) {
