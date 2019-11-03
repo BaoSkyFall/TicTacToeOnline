@@ -74,7 +74,6 @@ module.exports = function (socket) {
             if (typeof (playerWait.name) == "undefined") {
                 user.socketId = socket.id
                 playerWait = user;
-                console.log('playerWait:', playerWait);
             }
             else {
                 user.socketId = socket.id
@@ -87,7 +86,8 @@ module.exports = function (socket) {
                     turn: true,
                     isFinish: false,
                     isWinP1: false,
-                    users: newChat.users
+                    users: newChat.users,
+                    i: null
                 }
 
                 roomsPlay.push(room)
@@ -95,17 +95,14 @@ module.exports = function (socket) {
                 socket.emit("FIND_GAME", { newChat, room, Player1: false });
                 socket.to(playerWait.socketId).emit("SEND_PLAYER", { Player1: true });
                 socket.emit("SEND_PLAYER", { Player1: false });
-                console.log(newChat)
                 // socket.to(playerWait.socketId).emit("PRIVATE_MESSAGE", newChat);
                 // socket.emit("PRIVATE_MESSAGE", newChat);
                 playerWait = {};
-
-                console.log('playerWait:', playerWait);
             }
         }
     })
     //CHECK_SQUARE_CLICK
-    socket.on("CHECK_SQUARE_CLICK", ({ squares, isFinish_temp, isWinP1_temp, Player1, id }) => {
+    socket.on("CHECK_SQUARE_CLICK", ({ squares, isFinish_temp, isWinP1_temp, Player1, id, i }) => {
         let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
         console.log(index);
         console.log('isFinish_temp:', isFinish_temp)
@@ -115,22 +112,94 @@ module.exports = function (socket) {
         roomsPlay[index].squares = squares;
         roomsPlay[index].isFinish = isFinish_temp;
         roomsPlay[index].isWinP1 = isWinP1_temp;
+        roomsPlay[index].i = i;
+        console.log('roomsPlay[index].i:', roomsPlay[index].i)
 
 
         // socket.emit("CHECK_SQUARE_CLICK", { test: true });
         if (Player1) {
-            console.log("User 1 socketId: ",
-            roomsPlay[index].users[1]
-            )
-            socket.to(roomsPlay[index].users[1].socketId).emit("CHECK_SQUARE_CLICK",roomsPlay[index]);
+
+            socket.to(roomsPlay[index].users[1].socketId).emit("CHECK_SQUARE_CLICK", roomsPlay[index]);
 
         }
         else {
-            console.log("User 0 socketId: ",
-            roomsPlay[index].users[0])
-            socket.to(roomsPlay[index].users[0].socketId).emit("CHECK_SQUARE_CLICK",roomsPlay[index]);
+
+            socket.to(roomsPlay[index].users[0].socketId).emit("CHECK_SQUARE_CLICK", roomsPlay[index]);
 
         }
+        // console.log(roomsPlay[index]);
+    })
+    //REQUEST_UNDO
+    socket.on("REQUEST_UNDO", ({ id, Player1 }) => {
+        let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        // socket.emit("CHECK_SQUARE_CLICK", { test: true });
+        if (Player1) {
+            socket.to(roomsPlay[index].users[1].socketId).emit("REQUEST_UNDO");
+
+        }
+        else {
+
+            socket.to(roomsPlay[index].users[0].socketId).emit("REQUEST_UNDO");
+
+        }
+        // console.log(roomsPlay[index]);
+    })
+    //CONFIRM_UNDO
+    socket.on("CONFIRM_UNDO", ({ id, Player1,confirm }) => {
+        let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        // socket.emit("CHECK_SQUARE_CLICK", { test: true });
+        if (Player1) {
+            socket.to(roomsPlay[index].users[1].socketId).emit("CONFIRM_UNDO");
+
+        }
+        else {
+
+            socket.to(roomsPlay[index].users[0].socketId).emit("CONFIRM_UNDO");
+
+        }
+        // console.log(roomsPlay[index]);
+    })
+    //Surrender
+    socket.on("SURRENDER", ({ id, Player1 }) => {
+        let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        roomsPlay[index].isFinish = true;
+        roomsPlay[index].isWinP1 = Player1 ? false : true;
+
+
+        // socket.emit("CHECK_SQUARE_CLICK", { test: true });
+        if (Player1) {
+            socket.to(roomsPlay[index].users[1].socketId).emit("SURRENDER", roomsPlay[index]);
+
+        }
+        else {
+
+            socket.to(roomsPlay[index].users[0].socketId).emit("SURRENDER", roomsPlay[index]);
+
+        }
+        // console.log(roomsPlay[index]);
+    })
+
+
+    //EXIT_ROOM
+    socket.on("EXIT_ROOM", ({ id, Player1 }) => {
+        let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        roomsPlay[index].isFinish = true;
+        roomsPlay[index].isWinP1 = Player1 ? true : false;
+
+
+        // socket.emit("CHECK_SQUARE_CLICK", { test: true });
+        if (Player1) {
+
+            socket.to(roomsPlay[index].users[1].socketId).emit("EXIT_ROOM");
+
+        }
+        else {
+
+            socket.to(roomsPlay[index].users[0].socketId).emit("EXIT_ROOM");
+
+        }
+        roomsPlay.splice(index, 1);
+        console.log('roomsPlay after exiting:', roomsPlay)
         // console.log(roomsPlay[index]);
     })
 }
