@@ -67,7 +67,7 @@ module.exports = function (socket) {
     })
     //FIND_GAME
     socket.on("FIND_GAME", ({ user }) => {
-        // console.log('user:', user);
+        console.log('user in Find Game:', user);
 
         if (user.name in connectedUsers) {
 
@@ -77,6 +77,7 @@ module.exports = function (socket) {
                 console.log('playerWait:', playerWait);
             }
             else {
+                user.socketId = socket.id
 
                 const newChat = createChat({ name: `${user.name} VS ${playerWait.name}`, users: [playerWait, user] })
                 let room = {
@@ -104,31 +105,30 @@ module.exports = function (socket) {
         }
     })
     //CHECK_SQUARE_CLICK
-    socket.on("CHECK_SQUARE_CLICK", ({ squares, isFinish, isWinP1, Player1, id }) => {
+    socket.on("CHECK_SQUARE_CLICK", ({ squares, isFinish_temp, isWinP1_temp, Player1, id }) => {
         let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
         console.log(index);
-        console.log('isFinish:', isFinish)
-        console.log('isWinP1:', isWinP1)
+        console.log('isFinish_temp:', isFinish_temp)
+        console.log('isWinP1_temp:', isWinP1_temp)
         console.log('Player1:', Player1)
         console.log('id:', id)
         roomsPlay[index].squares = squares;
-        roomsPlay[index].isFinish = isFinish;
-        roomsPlay[index].isWinP1 = isWinP1;
+        roomsPlay[index].isFinish = isFinish_temp;
+        roomsPlay[index].isWinP1 = isWinP1_temp;
 
 
-
+        // socket.emit("CHECK_SQUARE_CLICK", { test: true });
         if (Player1) {
             console.log("User 1 socketId: ",
             roomsPlay[index].users[1]
             )
-            socket.to(roomsPlay[index].users[1].socketId).emit("CHECK_SQUARE_CLICK", {test:true});
+            socket.to(roomsPlay[index].users[1].socketId).emit("CHECK_SQUARE_CLICK",roomsPlay[index]);
 
         }
         else {
             console.log("User 0 socketId: ",
-            roomsPlay[index].users[0]
-            )
-            socket.to(roomsPlay[index].users[0].socketId).emit("CHECK_SQUARE_CLICK", {test:true});
+            roomsPlay[index].users[0])
+            socket.to(roomsPlay[index].users[0].socketId).emit("CHECK_SQUARE_CLICK",roomsPlay[index]);
 
         }
         // console.log(roomsPlay[index]);
