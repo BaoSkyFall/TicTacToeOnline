@@ -87,7 +87,9 @@ module.exports = function (socket) {
                     isFinish: false,
                     isWinP1: false,
                     users: newChat.users,
-                    i: null
+                    confirm: false,
+                    i: null,
+                    j: null,
                 }
 
                 roomsPlay.push(room)
@@ -112,6 +114,7 @@ module.exports = function (socket) {
         roomsPlay[index].squares = squares;
         roomsPlay[index].isFinish = isFinish_temp;
         roomsPlay[index].isWinP1 = isWinP1_temp;
+        roomsPlay[index].j = roomsPlay[index].i;
         roomsPlay[index].i = i;
         console.log('roomsPlay[index].i:', roomsPlay[index].i)
 
@@ -145,16 +148,33 @@ module.exports = function (socket) {
         // console.log(roomsPlay[index]);
     })
     //CONFIRM_UNDO
-    socket.on("CONFIRM_UNDO", ({ id, Player1,confirm }) => {
+    socket.on("CONFIRM_UNDO", ({ id, Player1, confirm }) => {
         let index = _.findIndex(roomsPlay, function (o) { return o.id == id; });
+        console.log("CONFIRM_UNDO WORK!!!!");
+        console.log('confirm:', confirm);
+        if (confirm) {
+            console.log(roomsPlay[index].i);
+            console.log(roomsPlay[index].squares[roomsPlay[index].i]);
+
+            if (roomsPlay[index].i) {
+                roomsPlay[index].squares[roomsPlay[index].i] = null;
+                roomsPlay[index].i = null;
+            }
+            else {
+                roomsPlay[index].squares[roomsPlay[index].j] = null;
+
+            }
+
+        }
+        roomsPlay[index].confirm = confirm;
         // socket.emit("CHECK_SQUARE_CLICK", { test: true });
         if (Player1) {
-            socket.to(roomsPlay[index].users[1].socketId).emit("CONFIRM_UNDO");
+            socket.to(roomsPlay[index].users[1].socketId).emit("CONFIRM_UNDO", (roomsPlay[index]));
 
         }
         else {
 
-            socket.to(roomsPlay[index].users[0].socketId).emit("CONFIRM_UNDO");
+            socket.to(roomsPlay[index].users[0].socketId).emit("CONFIRM_UNDO", (roomsPlay[index]));
 
         }
         // console.log(roomsPlay[index]);
